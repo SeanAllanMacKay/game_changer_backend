@@ -1,0 +1,1 @@
+ALTER TABLE "GameConfig" ADD COLUMN "color" text NOT NULL;

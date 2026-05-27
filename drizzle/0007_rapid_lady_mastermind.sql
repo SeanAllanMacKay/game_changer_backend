@@ -1,0 +1,1 @@
+ALTER TABLE "GameRoundAction" ADD COLUMN "inputSchema" jsonb;

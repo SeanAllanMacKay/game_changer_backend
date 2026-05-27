@@ -1,0 +1,2 @@
+ALTER TABLE "GameRoundAction" ADD COLUMN "actionTypeId" uuid NOT NULL;--> statement-breakpoint
+ALTER TABLE "GameRoundAction" ADD CONSTRAINT "GameRoundAction_actionTypeId_GameRoundActionType_id_fk" FOREIGN KEY ("actionTypeId") REFERENCES "public"."GameRoundActionType"("id") ON DELETE no action ON UPDATE no action;

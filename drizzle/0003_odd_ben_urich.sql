@@ -1,0 +1,2 @@
+ALTER TABLE "Game" ADD COLUMN "ownerId" uuid;--> statement-breakpoint
+ALTER TABLE "Game" ADD CONSTRAINT "Game_ownerId_User_id_fk" FOREIGN KEY ("ownerId") REFERENCES "public"."User"("id") ON DELETE no action ON UPDATE no action;

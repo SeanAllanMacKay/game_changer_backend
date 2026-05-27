@@ -1,0 +1,1 @@
+ALTER TABLE "RoundConfig" ADD COLUMN "repeatPerPlayer" boolean DEFAULT false NOT NULL;
