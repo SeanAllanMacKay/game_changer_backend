@@ -1,0 +1,13 @@
+node_modules
+dist
+.git
+.env
+.env.*
+*.pem
+ca.pem
+drizzle
+scripts
+npm-debug.log
+yarn-error.log
+*.md
+README

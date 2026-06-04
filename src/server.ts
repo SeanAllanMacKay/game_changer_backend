@@ -9,7 +9,7 @@ import routers from "./routers";
 import { initRealtime, parseGameChannel } from "./services/realtime";
 import { selectUserGame } from "./services/db";
 
-const API_PORT = process.env.API_PORT ?? 8082;
+const API_PORT = process.env.PORT ?? process.env.API_PORT ?? 8082;
 const FE_ORIGIN = process.env.FE_ORIGIN ?? "localhost:8081";
 const COOKIE_SECRET = process.env.COOKIE_SECRET;
 const NGROK_DOMAIN = process.env.NGROK_DOMAIN;

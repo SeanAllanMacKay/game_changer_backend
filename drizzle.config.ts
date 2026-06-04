@@ -14,7 +14,9 @@ export default defineConfig({
     password: process.env.DB_PASSWORD!,
     database: process.env.DB_DATABASE!,
     ssl: {
-      ca: fs.readFileSync(path.resolve(__dirname, "./ca.pem")).toString(),
+      ca: process.env.DB_CA_CERT
+        ? process.env.DB_CA_CERT
+        : fs.readFileSync(path.resolve(__dirname, "./ca.pem")).toString(),
     },
   },
   verbose: true,
