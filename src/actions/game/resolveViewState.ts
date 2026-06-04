@@ -39,6 +39,7 @@ export type ViewState = {
     currentLow: { amount: number; userId: string } | null;
     activeBuzzer: string | null;
     buzzers: string[];
+    drawings: { slotId: string; drawing: string }[];
   } | null;
   submissionProgress: { submitted: number; total: number } | null;
 };
@@ -46,6 +47,26 @@ export type ViewState = {
 const revealAndScoreOutputSchema = z.object({
   authorUserId: z.string(),
 });
+
+const shuffleDrawingsOutputSchema = z.object({
+  slots: z.array(z.object({ slotId: z.string(), drawing: z.string() })),
+});
+
+// Round-scoped (like `resolveBuzzers`): the anonymised drawings live on the
+// SHUFFLE_DRAWINGS action's `output.slots`, with no author references. They
+// become available once that SYSTEM step has run and stay available through
+// HOST_SELECT_WINNER / REVEAL_AND_SCORE. Empty before the shuffle, and `[]`
+// for any game that has no SHUFFLE_DRAWINGS action.
+const resolveDrawings = (
+  round: Round,
+): { slotId: string; drawing: string }[] => {
+  const shuffle = round.actions.find(
+    (a) => a.config.actionType.name === "SHUFFLE_DRAWINGS",
+  );
+  if (!shuffle?.output) return [];
+  const parsed = shuffleDrawingsOutputSchema.safeParse(shuffle.output);
+  return parsed.success ? parsed.data.slots : [];
+};
 
 const resolveRevealedUserId = (
   round: Round,
@@ -234,6 +255,7 @@ export const resolveViewState = ({
       currentLow: resolveCurrentLow(currentAction),
       activeBuzzer: resolveActiveBuzzer(currentAction),
       buzzers: resolveBuzzers(currentRound),
+      drawings: resolveDrawings(currentRound),
     },
     submissionProgress,
   };

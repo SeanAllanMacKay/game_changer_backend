@@ -7,15 +7,18 @@ import {
 } from "../../services/db";
 import {
   suggestMakeSomeNoisePrompt,
+  suggestPencilsDownPrompt,
   suggestRaceToTheBottomPrompt,
 } from "../../services/gemini";
 import { MAKE_SOME_NOISE_GAME_NAME } from "../../games/makeSomeNoise";
+import { PENCILS_DOWN_GAME_NAME } from "../../games/pencilsDown";
 import { RACE_TO_THE_BOTTOM_GAME_NAME } from "../../games/raceToTheBottom";
 import { HTTP_STATUSES } from "../HTTP_STATUSES";
 
 const SUGGESTERS: Record<string, () => Promise<string>> = {
   [RACE_TO_THE_BOTTOM_GAME_NAME]: suggestRaceToTheBottomPrompt,
   [MAKE_SOME_NOISE_GAME_NAME]: suggestMakeSomeNoisePrompt,
+  [PENCILS_DOWN_GAME_NAME]: suggestPencilsDownPrompt,
 };
 
 const SuggestHostPromptSchema = z.object({

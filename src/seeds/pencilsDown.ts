@@ -7,49 +7,56 @@ import {
   GameRoundActionType,
 } from "../services/db";
 
-const GAME_NAME = "Race to the Bottom";
+const GAME_NAME = "Pencils Down";
 
 /**
- * Race to the Bottom — every player hosts twice. The Gameplay round is
- * seeded with `repeatPerPlayer: true, repeatCount: 2`, which makes
- * `startGame.ts` spawn one `GameRound` per (player, repeat) and pre-populate
- * each round's `activePlayerId` with the rotating host. No explicit
- * "assign host" action is needed.
+ * Pencils Down — every player hosts twice. The Gameplay round is seeded with
+ * `repeatPerPlayer: true, repeatCount: 2`, which makes `startGame.ts` spawn
+ * one `GameRound` per (player, repeat) and pre-populate each round's
+ * `activePlayerId` with the rotating host. No explicit "assign host" action
+ * is needed (mirrors Make Some Noise and Race to the Bottom).
  *
- * Action types named `HOST_PROMPT_SUBMIT`, `AUCTION_BID`, `HOST_FINALIZE`,
- * `HOST_CONFIRM_COMPLETION`, and `BID_RESOLVE_AND_SCORE` are reserved for
- * this game — Dirty Laundry does not register handlers for them, and vice
- * versa.
+ * Round flow: host writes a drawing prompt; non-hosts each submit one
+ * drawing (3 min timer); a SYSTEM action shuffles the drawings into
+ * anonymous slots (A, B, C, ...) and writes them to its `output`, which
+ * `selectGame` exposes to everyone; the host picks a winning slot without
+ * knowing the author; REVEAL_AND_SCORE maps the slot back to the author and
+ * awards 1 point.
+ *
+ * `HOST_PROMPT_SUBMIT`, `HOST_SELECT_WINNER`, `REVEAL_AND_SCORE`, and
+ * `DECLARE_WINNER` are shared globally with the other games (per-game
+ * handler lookup keeps semantics isolated). `DRAWING_SUBMISSION` and
+ * `SHUFFLE_DRAWINGS` are PD-specific.
  */
 const ACTION_TYPES = [
   {
     name: "HOST_PROMPT_SUBMIT",
     role: "HOST",
-    description:
-      "Host writes the prompt for this round. May optionally pick an AI-generated suggestion.",
+    description: "What are the other players draweing?",
   },
   {
-    name: "AUCTION_BID",
+    name: "DRAWING_SUBMISSION",
     role: "PLAYER",
     description:
-      "Non-hosts place bids; each bid must be strictly lower than the current low.",
+      "Non-hosts each submit one drawing of the host's prompt. Stored as a stroke array in `payload.field[0].text` (JSON-encoded) so the FE canvas can re-render it later.",
   },
   {
-    name: "HOST_FINALIZE",
-    role: "HOST",
-    description: "Host taps once to close bidding and lock in the winner.",
-  },
-  {
-    name: "HOST_CONFIRM_COMPLETION",
-    role: "HOST",
-    description:
-      "Host confirms whether the winning bidder actually completed the prompt. Points are only awarded on confirmation.",
-  },
-  {
-    name: "BID_RESOLVE_AND_SCORE",
+    name: "SHUFFLE_DRAWINGS",
     role: "SYSTEM",
     description:
-      "If the host confirmed completion, award the winning bid amount as points. Auto-advances the round.",
+      "Collects every DRAWING_SUBMISSION, applies a deterministic shuffle keyed by `roundId`, and writes the drawings to its `output.slots` as `{ slotId, drawing }` with no author references. The FE renders these for the host's blind pick.",
+  },
+  {
+    name: "HOST_SELECT_WINNER",
+    role: "HOST",
+    description:
+      "Host selects the slot whose drawing they like best. Picks a `slotId` from SHUFFLE_DRAWINGS.output, not a userId.",
+  },
+  {
+    name: "REVEAL_AND_SCORE",
+    role: "SYSTEM",
+    description:
+      "Reveal the author of the winning drawing and award 1 point. Re-applies the same deterministic shuffle to map slotId → userId.",
   },
   {
     name: "DECLARE_WINNER",
@@ -60,7 +67,7 @@ const ACTION_TYPES = [
 
 type ActionTypeName = (typeof ACTION_TYPES)[number]["name"];
 
-export const seedRaceToTheBottom = async () => {
+export const seedPencilsDown = async () => {
   await db.transaction(async (tx) => {
     const existing = await tx.query.GameConfig.findFirst({
       where: (gc, { eq }) => eq(gc.name, GAME_NAME),
@@ -114,10 +121,10 @@ export const seedRaceToTheBottom = async () => {
       .values({
         name: GAME_NAME,
         description:
-          "How low will you go for made-up points in a game with your friends?",
+          "Doodle on demand. The host calls out something to draw; everyone else has three minutes to put pencil to canvas. The host picks their favorite without knowing who drew it — best artist (or best bullshitter) wins.",
         minPlayers: 3,
         maxPlayers: 10,
-        color: "#276221",
+        color: "#e8b923",
       })
       .returning();
 
@@ -131,7 +138,7 @@ export const seedRaceToTheBottom = async () => {
         phase: "PLAY",
         name: "Gameplay",
         description:
-          "Host picks a prompt, players bid down. Lowest bidder must complete the prompt and wins the bid amount in points. Each player hosts twice.",
+          "Host writes a prompt, non-hosts draw it (3 minutes), the host picks a favourite blind, and the author is revealed and scored. Each player hosts twice.",
       })
       .returning();
 
@@ -141,68 +148,55 @@ export const seedRaceToTheBottom = async () => {
         actionTypeId: actionTypeIds.HOST_PROMPT_SUBMIT,
         order: 1,
         timer: 90_000,
-        description: "Come up with a task for the other players to bid on.",
-        prompt:
-          "You are suggesting silly, doable party-game challenges for the host of Race to the Bottom. Each suggestion should be one short sentence, in plain English, describing an action that can be completed in under two minutes with no special props.",
+        description: "Write a prompt for the other players to draw.",
         inputSchema: {
           kind: "text",
           required: true,
-          label: "Challenge",
+          label: "Prompt",
           maxLength: 280,
         },
       },
       {
         roundConfigId: gameplayRound.id,
-        actionTypeId: actionTypeIds.AUCTION_BID,
+        actionTypeId: actionTypeIds.DRAWING_SUBMISSION,
         order: 2,
-        timer: null,
+        timer: 180_000,
         description:
-          "Non-hosts place bids. Each new bid must be strictly lower than the current low. Bidding stays open until the host finalises the round.",
+          "Draw the host's prompt. You have 3 minutes. The drawing is stored as a stroke array so the FE canvas can re-render it later.",
         inputSchema: {
-          kind: "number",
+          kind: "drawing",
           required: true,
-          min: 0,
-          max: 10000,
-          label: "Bid",
+          label: "Your drawing",
         },
       },
       {
         roundConfigId: gameplayRound.id,
-        actionTypeId: actionTypeIds.HOST_FINALIZE,
+        actionTypeId: actionTypeIds.SHUFFLE_DRAWINGS,
         order: 3,
         timer: null,
         description:
-          "Host taps once to close bidding and lock in the lowest bidder as the winner.",
-        inputSchema: {
-          kind: "ack",
-          required: true,
-          label: "Close bidding",
-        },
+          "Anonymise the drawings into slots (A, B, C, ...) for the host's blind pick. Auto-advances the round.",
       },
       {
         roundConfigId: gameplayRound.id,
-        actionTypeId: actionTypeIds.HOST_CONFIRM_COMPLETION,
+        actionTypeId: actionTypeIds.HOST_SELECT_WINNER,
         order: 4,
         timer: null,
         description:
-          "Host watches the winner attempt the prompt and confirms whether they completed it. Points are only awarded on confirmation.",
+          "Host picks the slot whose drawing they like best. The author is not revealed until the next step.",
         inputSchema: {
           kind: "choice",
           required: true,
-          label: "Did the winner complete the prompt?",
-          options: [
-            { value: "confirmed", label: "Yes — award points" },
-            { value: "denied", label: "No — no points" },
-          ],
+          label: "Which drawing wins?",
         },
       },
       {
         roundConfigId: gameplayRound.id,
-        actionTypeId: actionTypeIds.BID_RESOLVE_AND_SCORE,
+        actionTypeId: actionTypeIds.REVEAL_AND_SCORE,
         order: 5,
         timer: null,
         description:
-          "If the host confirmed completion, award the winning bid amount as points to the lowest bidder. If denied or nobody bid, no points are awarded. Auto-advances the round.",
+          "Reveal the author of the winning drawing and award them 1 point. Auto-advances the round.",
       },
     ]);
 

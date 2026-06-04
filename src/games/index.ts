@@ -5,6 +5,10 @@ import {
   MAKE_SOME_NOISE_GAME_NAME,
 } from "./makeSomeNoise";
 import {
+  pencilsDownHandlers,
+  PENCILS_DOWN_GAME_NAME,
+} from "./pencilsDown";
+import {
   raceToTheBottomHandlers,
   RACE_TO_THE_BOTTOM_GAME_NAME,
 } from "./raceToTheBottom";
@@ -23,6 +27,7 @@ export const GAME_HANDLERS: Record<string, GameHandlerMap> = {
   [DIRTY_LAUNDRY_GAME_NAME]: dirtyLaundryHandlers,
   [RACE_TO_THE_BOTTOM_GAME_NAME]: raceToTheBottomHandlers,
   [MAKE_SOME_NOISE_GAME_NAME]: makeSomeNoiseHandlers,
+  [PENCILS_DOWN_GAME_NAME]: pencilsDownHandlers,
 };
 
 export const getActionHandler = (

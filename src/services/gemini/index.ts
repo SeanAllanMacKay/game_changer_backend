@@ -53,3 +53,4 @@ export { Type };
 export * from "./reformatTruthsAsWhoQuestions";
 export * from "./suggestRaceToTheBottomPrompt";
 export * from "./suggestMakeSomeNoisePrompt";
+export * from "./suggestPencilsDownPrompt";
