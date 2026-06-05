@@ -38,7 +38,11 @@ export const joinGame = async ({
   try {
     JoinGameSchema.parse({ gameCode, name, deviceId });
 
-    const existingGame = await selectGameByCode({ gameCode });
+    const normalizedGameCode = gameCode.toUpperCase();
+
+    const existingGame = await selectGameByCode({
+      gameCode: normalizedGameCode,
+    });
 
     if (!existingGame) {
       throw {
@@ -82,7 +86,7 @@ export const joinGame = async ({
 
     const existingMembership = await selectUserGame({
       userId: resolvedUserId,
-      gameCode,
+      gameCode: normalizedGameCode,
     });
 
     if (!existingMembership && existingGame.status !== "WAITING") {
@@ -94,20 +98,27 @@ export const joinGame = async ({
 
     const userGame = await insertUserGame({
       userId: resolvedUserId,
-      gameCode,
+      gameCode: normalizedGameCode,
     });
 
-    const game = await selectGame({ userId: resolvedUserId, gameCode });
+    const game = await selectGame({
+      userId: resolvedUserId,
+      gameCode: normalizedGameCode,
+    });
 
     if (userGame) {
       const broadcastUser =
         user ?? (await selectUser({ userId: resolvedUserId }));
 
-      realtime.publish(gameChannel(gameCode), GAME_EVENTS.PLAYER_JOINED, {
-        gameCode,
-        userGame,
-        user: broadcastUser,
-      });
+      realtime.publish(
+        gameChannel(normalizedGameCode),
+        GAME_EVENTS.PLAYER_JOINED,
+        {
+          gameCode: normalizedGameCode,
+          userGame,
+          user: broadcastUser,
+        },
+      );
     }
 
     return {

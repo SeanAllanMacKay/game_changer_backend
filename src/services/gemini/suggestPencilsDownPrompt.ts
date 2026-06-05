@@ -1,54 +1,18 @@
 import { generateText, Type } from "./index";
 
-const SYSTEM_INSTRUCTION = `You are suggesting a drawing prompt for the host of Pencils Down, a party game. Every non-host player has three minutes to draw the prompt with one finger on a phone, then the host picks their favourite — without knowing who drew it.
+const SYSTEM_INSTRUCTION = `You suggest a drawing prompt for the host of Pencils Down. Every non-host player has three minutes to draw the prompt with one finger on a phone; the host picks their favourite.
 
-THE CORE PRINCIPLE — a great prompt is an OPEN CREATIVE BRIEF, not a thing to copy:
-- The fun is that ten players invent ten completely different answers and the host picks the funniest. The comedy lives in each player's IDEA and interpretation, not in how well they draw.
-- So the prompt must invite invention and wildly different responses. If everyone would draw basically the same picture, it is a BAD prompt — there is nothing to pick between.
-- This is NOT "draw a recognisable object." Literal subjects like "a cat", "a house", or "a shark on a skateboard" are banned: there is nothing to invent.
+A great prompt is an OPEN CREATIVE BRIEF, not a thing to copy. Ten players should invent ten different answers — the comedy is in each player's idea, not their drawing skill. If everyone would draw the same picture it's a bad prompt. Literal subjects ("a cat", "a shark on a skateboard") are banned.
 
-THE FINGER-ON-PHONE CONSTRAINT:
-- People draw in crude, wobbly fingertip strokes in three minutes. The IDEA can be ambitious, but it must be conveyable as a rough sketch.
-- The joke must land through imagery, never through readable text. Even formats that normally have words — posters, album covers, billboards, book covers — must work as pictures, because handwriting with a finger is illegible.
+THE FINGER-ON-PHONE LIMIT: the idea can be ambitious but the ANSWER must be ONE simple, concrete subject — a single character, object, creature, or piece of artwork that fills the frame. If it needs a busy scene, multiple characters, a sequence of events, or a split-second of timing, reject it (e.g. "the exact second a first date goes wrong" — that's a moment, not a thing to draw). The joke must land through imagery, never readable text (a finger can't write legibly), so even posters/album covers/book covers must work as pictures.
 
-THE THREE KINDS OF PROMPT — rotate across all three:
+TWO KINDS — rotate across both, each resolving to ONE drawable subject:
+1) AN ILLUSTRATION FORMAT attached to an absurdly mismatched subject (the clash is the joke): "A tramp stamp your grandma might have", "A cover for Sesame Street's new death metal album", "A billboard for ketamine", "A motivational poster for giving up", "A wanted poster for the Tooth Fairy".
+2) A NEW INVENTED THING (the comedy is whatever they come up with): "The next big thing", "A better mousetrap", "A new pokemon", "The next big horror movie monster", "An animal that evolution forgot", "The world's least useful superhero", "What your dog dreams about".
 
-1) A TYPE OF ILLUSTRATION — name a real illustration or design format, attached to an absurdly mismatched subject. The clash is the joke; the player draws the artwork.
-   - "A tramp stamp your grandma might have"
-   - "A cover for Sesame Street's new death metal album"
-   - "A billboard for ketamine"
-   - "A motivational poster for giving up"
-   - "A children's book cover about taxes"
-   - "A wanted poster for the Tooth Fairy"
+TONE: cheeky, irreverent PG-13 — a little dark or rude; topical and pop-culture references welcome (drugs, death metal, politics, bodily mishaps). No explicit sexual content, gore, slurs, or hate. Don't hinge on a specific celebrity's likeness or a real brand logo.
 
-2) A NEW TYPE OF THING — ask the player to invent something. The comedy is whatever they come up with.
-   - "The next big thing"
-   - "A better mousetrap"
-   - "A new pokemon"
-   - "The local community college's new mascot"
-   - "The next big horror movie monster"
-   - "An animal that evolution forgot"
-   - "The world's least useful superhero"
-
-3) A FUNNY SITUATION — name a specific absurd or loaded moment to depict.
-   - "The worst moment for a bullet time sequence"
-   - "The exact moment a politician lost the election"
-   - "The worst possible time to sneeze"
-   - "The most awkward family photo ever taken"
-   - "What your dog dreams about"
-
-TONE — cheeky, irreverent PG-13:
-- A little dark, a little rude; topical and pop-culture references are welcome (drugs, death metal, politics, bodily mishaps are all fair game, as the examples show).
-- No explicit sexual content, no gore, no slurs or hate. Do not hinge on a specific named celebrity's likeness or a real brand logo — a finger can't draw a recognisable face or logo anyway.
-
-LENGTH:
-- One short phrase. Target 4–11 words. Hard ceiling of 14 words.
-- No clause explaining the joke, no preamble, no quotes. Just the brief.
-
-BAD EXAMPLES — never suggest these:
-- Literal single objects or simple mashups: "a cat", "a wizard", "a shark riding a skateboard", "a grumpy potato". Everyone draws the same thing, so there is nothing to pick between.
-- Anything that needs legible text to land.
-- Abstract ideas with no possible picture ("freedom", "Monday").
+LENGTH: one short phrase, 4–11 words (14 max). No clause explaining the joke, no preamble, no quotes.
 
 Return a JSON object of the form { "prompt": string } — exactly one suggestion.`;
 
@@ -61,11 +25,11 @@ const CATEGORY_NUDGES = [
   "a brand-new invented creature — a new pokemon, monster, or an animal evolution forgot",
   "a new invented product, gadget, or 'next big thing' nobody asked for",
   "a new mascot, flag, god, or symbol for an unexpected group or institution",
-  "the exact worst possible moment for something to happen",
-  "the precise instant a plan goes catastrophically wrong",
-  "an absurd 'design the ___' brief that invites wildly different answers",
-  "the most awkward or revealing moment captured as a single snapshot",
+  "a new villain, superhero, or sidekick nobody asked for",
   "a wholesome brand or character reimagined in a dark or edgy way",
+  "an absurd 'design the ___' brief that invites wildly different single subjects",
+  "a warning label, road sign, or trophy for something ridiculous",
+  "a redesigned everyday object that has gone horribly wrong",
 ];
 
 /**
@@ -81,7 +45,7 @@ export const suggestPencilsDownPrompt = async (): Promise<string> => {
     CATEGORY_NUDGES[Math.floor(Math.random() * CATEGORY_NUDGES.length)];
 
   const raw = await generateText({
-    prompt: `Give one drawing prompt. Bias this one toward: ${nudge}. One short phrase, 4–11 words. It must be an OPEN creative brief that ten players would answer ten different ways — never a literal object to copy. The joke must land through imagery, not text.`,
+    prompt: `Give one drawing prompt. Bias this one toward: ${nudge}. One short phrase, 4–11 words. It must be an OPEN creative brief that ten players would answer ten different ways — never a literal object to copy. Each answer must resolve to ONE simple, concrete subject a player can draw with a finger in three minutes — not a scene, a sequence of events, or a split-second moment. The joke must land through imagery, not text.`,
     systemInstruction: SYSTEM_INSTRUCTION,
     responseSchema: {
       type: Type.OBJECT,

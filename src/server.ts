@@ -3,7 +3,6 @@ import { createServer } from "http";
 import bodyParser from "body-parser";
 import cors from "cors";
 import cookieParser from "cookie-parser";
-import ngrok from "@ngrok/ngrok";
 
 import routers from "./routers";
 import { initRealtime, parseGameChannel } from "./services/realtime";
@@ -14,8 +13,18 @@ const FE_ORIGIN = process.env.FE_ORIGIN ?? "localhost:8081";
 const COOKIE_SECRET = process.env.COOKIE_SECRET;
 const NGROK_DOMAIN = process.env.NGROK_DOMAIN;
 
+// We intentionally log-and-continue rather than exit. Until graceful shutdown
+// is in place, exiting on a single stray error would drop every in-flight game
+// session. Node would otherwise terminate the process on an unhandled rejection
+// (Node >=15 default), so we catch that here too to keep live games alive.
+// TODO: once graceful shutdown exists, switch these to a controlled drain+exit
+// so the host can restart a known-bad process cleanly instead of limping on.
 process.on("uncaughtException", (error) => {
-  console.error("UNCAUGHT ERROR", error);
+  console.error("UNCAUGHT EXCEPTION — process kept alive:", error);
+});
+
+process.on("unhandledRejection", (reason) => {
+  console.error("UNHANDLED REJECTION — process kept alive:", reason);
 });
 
 const app = express();
@@ -53,6 +62,9 @@ server.listen(API_PORT, () => {
 
 if (process.env.NODE_ENV === "development") {
   (async () => {
+    // Dev-only dependency: imported lazily so it isn't required in production
+    // (where @ngrok/ngrok isn't installed).
+    const { default: ngrok } = await import("@ngrok/ngrok");
     const listener = await ngrok.forward({
       addr: API_PORT,
       domain: NGROK_DOMAIN,

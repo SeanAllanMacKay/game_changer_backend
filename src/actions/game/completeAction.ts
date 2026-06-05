@@ -15,6 +15,13 @@ import { advanceRoundIfComplete } from "./advanceRoundIfComplete";
 // client.
 const FE_COMPLETABLE_ACTION_TYPES = new Set(["SHOW_STANDINGS"]);
 
+// When the round has revealed a truth's author (Dirty Laundry's
+// REVEAL_AND_SCORE), the player whose truth it was for the round owns the
+// "continue" — not the game owner.
+const revealAndScoreOutputSchema = z.object({
+  authorUserId: z.string(),
+});
+
 const CompleteActionSchema = z.object({
   gameCode: z.string().min(1),
   userId: z.string().min(1),
@@ -87,6 +94,26 @@ export const completeAction = async (props: CompleteActionProps) => {
         status: HTTP_STATUSES.CLIENT_ERROR.FORBIDDEN,
         error: ["This action is not completable"],
       };
+    }
+
+    // If this round revealed a truth's author (Dirty Laundry's
+    // REVEAL_AND_SCORE), the player whose truth it was for the round owns the
+    // "continue". Otherwise any player in the game may complete it.
+    const roundActions = await db.query.GameRoundAction.findMany({
+      where: (a, { eq }) => eq(a.roundId, roundId),
+      with: { actionType: { columns: { name: true } } },
+    });
+    const reveal = roundActions.find(
+      (a) => a.actionType.name === "REVEAL_AND_SCORE",
+    );
+    if (reveal?.output) {
+      const parsed = revealAndScoreOutputSchema.safeParse(reveal.output);
+      if (parsed.success && parsed.data.authorUserId !== userId) {
+        throw {
+          status: HTTP_STATUSES.CLIENT_ERROR.FORBIDDEN,
+          error: ["Only the player whose truth was revealed can continue"],
+        };
+      }
     }
 
     const claimed = await markActionOutput({
