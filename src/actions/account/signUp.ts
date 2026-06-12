@@ -46,6 +46,8 @@ export const signUp = async ({
         userId: existingGuest.id,
         name,
         password: hashedPassword,
+        deviceId: null,
+        isGuest: false,
       });
 
       const newToken = auth.sign({ id: updatedUser.id });
@@ -62,7 +64,6 @@ export const signUp = async ({
       ...rest,
       name,
       password: hashedPassword,
-      deviceId,
     });
 
     const newToken = auth.sign({ id: newUser.id });

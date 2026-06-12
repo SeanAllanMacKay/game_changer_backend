@@ -6,6 +6,7 @@ export const insertUser = async ({
   name,
   password,
   deviceId,
+  isGuest,
 }: InsertUserProps) => {
   const [user] = await db
     .insert(User)
@@ -13,6 +14,7 @@ export const insertUser = async ({
       name,
       password,
       deviceId,
+      ...(isGuest !== undefined ? { isGuest } : {}),
     })
     .returning({
       id: User.id,

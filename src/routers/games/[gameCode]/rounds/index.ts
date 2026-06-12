@@ -1,6 +1,7 @@
 import { Router } from "express";
 
 import { HTTP_STATUSES, listGameRounds } from "../../../../actions";
+import auth from "../../../../services/auth";
 import requireDeviceId from "../../../../services/auth/requireDeviceId";
 import roundIdRouter from "./[roundId]";
 
@@ -11,11 +12,25 @@ router.use("/:roundId", roundIdRouter);
 router.route("/").get(requireDeviceId, async (req: any, res) => {
   try {
     const {
+      signedCookies: { auth: token },
       deviceId,
       params: { gameCode },
     } = req;
 
+    let userId: string | undefined;
+
+    if (token) {
+      const verifiedToken = (await auth.verify(token)) as
+        | { id: string }
+        | false;
+
+      if (verifiedToken) {
+        userId = verifiedToken.id;
+      }
+    }
+
     const { status, message, rounds } = await listGameRounds({
+      userId,
       deviceId,
       gameCode,
     });

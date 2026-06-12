@@ -2,6 +2,7 @@ import cookieParser from "cookie-parser";
 
 import auth from "../auth";
 import { getUserById } from "../../actions";
+import { selectUserByDeviceId } from "../db";
 
 import type { Socket } from "socket.io";
 
@@ -41,6 +42,25 @@ export async function authenticateSocket(
     typeof rawDeviceId === "string" ? rawDeviceId.trim() : "";
   if (!deviceId) return null;
 
+  // Prefer a logged-in user identified by the signed auth cookie.
+  const authed = await authenticateByCookie(socket, deviceId);
+  if (authed) return authed;
+
+  // Fall back to a guest identified by deviceId (mirrors the HTTP routes,
+  // where the auth cookie is optional and guests are resolved via deviceId).
+  try {
+    const guest = await selectUserByDeviceId({ deviceId });
+    if (!guest) return null;
+    return { userId: guest.id, user: guest, deviceId };
+  } catch {
+    return null;
+  }
+}
+
+async function authenticateByCookie(
+  socket: Socket,
+  deviceId: string,
+): Promise<AuthedSocketData | null> {
   const cookies = parseCookieHeader(socket.handshake.headers.cookie);
   const raw = cookies.auth;
   if (!raw) return null;

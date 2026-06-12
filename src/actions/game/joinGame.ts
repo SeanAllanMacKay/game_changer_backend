@@ -77,6 +77,7 @@ export const joinGame = async ({
           name,
           password: guestPassword,
           deviceId,
+          isGuest: true,
         });
         resolvedUserId = user.id;
       }

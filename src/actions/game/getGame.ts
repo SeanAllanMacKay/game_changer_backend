@@ -3,23 +3,31 @@ import { HTTP_STATUSES } from "../HTTP_STATUSES";
 import { resolveViewState } from "./resolveViewState";
 
 export const getGame = async ({
+  userId,
   deviceId,
   gameCode,
 }: {
+  userId?: string;
   deviceId: string;
   gameCode: string;
 }) => {
   try {
-    const user = await selectUserByDeviceId({ deviceId });
+    let resolvedUserId = userId;
 
-    if (!user) {
-      throw {
-        status: HTTP_STATUSES.CLIENT_ERROR.NOT_FOUND,
-        error: ["No user found for this device"],
-      };
+    if (!resolvedUserId) {
+      const guest = await selectUserByDeviceId({ deviceId });
+
+      if (!guest) {
+        throw {
+          status: HTTP_STATUSES.CLIENT_ERROR.NOT_FOUND,
+          error: ["No user found for this device"],
+        };
+      }
+
+      resolvedUserId = guest.id;
     }
 
-    const game = await selectGame({ userId: user.id, gameCode });
+    const game = await selectGame({ userId: resolvedUserId, gameCode });
 
     if (!game) {
       throw {
@@ -28,7 +36,7 @@ export const getGame = async ({
       };
     }
 
-    const viewState = resolveViewState({ game, userId: user.id });
+    const viewState = resolveViewState({ game, userId: resolvedUserId });
 
     return {
       status: HTTP_STATUSES.SUCCESS.OK,

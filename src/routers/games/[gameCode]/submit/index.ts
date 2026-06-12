@@ -1,21 +1,36 @@
 import { Router } from "express";
 
 import { HTTP_STATUSES, submitRound } from "../../../../actions";
-import verifyToken from "../../../../services/auth/verifyToken";
+import auth from "../../../../services/auth";
+import requireDeviceId from "../../../../services/auth/requireDeviceId";
 
 const router = Router({ mergeParams: true });
 
-router.route("/").post(verifyToken, async (req: any, res) => {
+router.route("/").post(requireDeviceId, async (req: any, res) => {
   try {
     const {
-      user,
       params: { gameCode },
+      signedCookies: { auth: token },
       body: { actionId, payload },
+      deviceId,
     } = req;
+
+    let userId: string | undefined;
+
+    if (token) {
+      const verifiedToken = (await auth.verify(token)) as
+        | { id: string }
+        | false;
+
+      if (verifiedToken) {
+        userId = verifiedToken.id;
+      }
+    }
 
     const { status, message, submission } = await submitRound({
       gameCode,
-      userId: user.id,
+      userId,
+      deviceId,
       actionId,
       payload,
     });

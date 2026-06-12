@@ -6,6 +6,7 @@ import {
   GameRoundSubmission,
   insertGameRoundSubmission,
   selectGameByCode,
+  selectUserByDeviceId,
   selectUserGame,
 } from "../../services/db";
 import { getActionHandler } from "../../games";
@@ -19,16 +20,43 @@ const SubmitRoundSchema = z.object({
   payload: z.record(z.string(), z.unknown()),
 });
 
-type SubmitRoundProps = z.infer<typeof SubmitRoundSchema>;
+type SubmitRoundProps = {
+  gameCode: string;
+  userId?: string;
+  deviceId: string;
+  actionId: string;
+  payload: Record<string, unknown>;
+};
 
 export const submitRound = async ({
   gameCode,
   userId,
+  deviceId,
   actionId,
   payload,
 }: SubmitRoundProps) => {
   try {
-    SubmitRoundSchema.parse({ gameCode, userId, actionId, payload });
+    let resolvedUserId = userId;
+
+    if (!resolvedUserId) {
+      const guest = await selectUserByDeviceId({ deviceId });
+
+      if (!guest) {
+        throw {
+          status: HTTP_STATUSES.CLIENT_ERROR.NOT_FOUND,
+          error: ["No user found for this device"],
+        };
+      }
+
+      resolvedUserId = guest.id;
+    }
+
+    SubmitRoundSchema.parse({
+      gameCode,
+      userId: resolvedUserId,
+      actionId,
+      payload,
+    });
 
     const game = await selectGameByCode({ gameCode });
 
@@ -46,7 +74,10 @@ export const submitRound = async ({
       };
     }
 
-    const membership = await selectUserGame({ userId, gameCode });
+    const membership = await selectUserGame({
+      userId: resolvedUserId,
+      gameCode,
+    });
 
     if (!membership) {
       throw {
@@ -136,7 +167,7 @@ export const submitRound = async ({
       gameCode,
       roundId: action.round.id,
       actionId,
-      userId,
+      userId: resolvedUserId,
     };
 
     if (handler.crossValidate) {
@@ -149,7 +180,7 @@ export const submitRound = async ({
         .from(GameRoundSubmission)
         .where(
           and(
-            eq(GameRoundSubmission.userId, userId),
+            eq(GameRoundSubmission.userId, resolvedUserId),
             eq(GameRoundSubmission.actionId, actionId),
           ),
         )
@@ -163,7 +194,7 @@ export const submitRound = async ({
     }
 
     const submission = await insertGameRoundSubmission({
-      userId,
+      userId: resolvedUserId,
       roundId: action.round.id,
       actionId,
       payload: validatedPayload,
@@ -173,7 +204,7 @@ export const submitRound = async ({
       gameCode,
       roundId: action.round.id,
       actionId,
-      userId,
+      userId: resolvedUserId,
       submissionId: submission.id,
     });
 

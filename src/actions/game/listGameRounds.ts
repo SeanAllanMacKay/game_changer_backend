@@ -6,23 +6,31 @@ import {
 import { HTTP_STATUSES } from "../HTTP_STATUSES";
 
 export const listGameRounds = async ({
+  userId,
   deviceId,
   gameCode,
 }: {
+  userId?: string;
   deviceId: string;
   gameCode: string;
 }) => {
   try {
-    const user = await selectUserByDeviceId({ deviceId });
+    let resolvedUserId = userId;
 
-    if (!user) {
-      throw {
-        status: HTTP_STATUSES.CLIENT_ERROR.NOT_FOUND,
-        error: ["No user found for this device"],
-      };
+    if (!resolvedUserId) {
+      const guest = await selectUserByDeviceId({ deviceId });
+
+      if (!guest) {
+        throw {
+          status: HTTP_STATUSES.CLIENT_ERROR.NOT_FOUND,
+          error: ["No user found for this device"],
+        };
+      }
+
+      resolvedUserId = guest.id;
     }
 
-    const userGame = await selectUserGame({ userId: user.id, gameCode });
+    const userGame = await selectUserGame({ userId: resolvedUserId, gameCode });
 
     if (!userGame) {
       throw {

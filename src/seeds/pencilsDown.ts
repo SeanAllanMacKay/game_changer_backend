@@ -121,10 +121,10 @@ export const seedPencilsDown = async () => {
       .values({
         name: GAME_NAME,
         description:
-          "Doodle on demand. The host calls out something to draw; everyone else has three minutes to put pencil to canvas. The host picks their favorite without knowing who drew it — best artist (or best bullshitter) wins.",
+          "Can creativity make up for artistic ability? Probably not, but you might win anyway.",
         minPlayers: 3,
         maxPlayers: 10,
-        color: "#e8b923",
+        color: "#eb5017",
       })
       .returning();
 

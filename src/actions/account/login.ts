@@ -2,7 +2,7 @@ import bcrypt from "bcryptjs";
 import auth from "../../services/auth";
 import { HTTP_STATUSES } from "../HTTP_STATUSES";
 import * as z from "zod";
-import { claimDeviceIdForUser, selectUserByName } from "../../services/db";
+import { selectUserByName } from "../../services/db";
 
 const LoginSchema = z.object({
   name: z.string("Invalid name"),
@@ -33,10 +33,6 @@ export const login = async ({ name, password, deviceId }: LoginProps) => {
         status: HTTP_STATUSES.CLIENT_ERROR.UNAUTHORIZED,
         error: ["That name/password combination didn't match our records"],
       };
-    }
-
-    if (deviceId) {
-      await claimDeviceIdForUser({ userId: id, deviceId });
     }
 
     const newToken = auth.sign({ id });

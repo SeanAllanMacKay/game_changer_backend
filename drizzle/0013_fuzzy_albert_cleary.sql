@@ -1,0 +1,1 @@
+ALTER TABLE "User" ADD COLUMN "isGuest" boolean DEFAULT false NOT NULL;

@@ -1,17 +1,40 @@
 import { Router } from "express";
 
-import { HTTP_STATUSES, login, signUp } from "../../actions";
-import verifyToken from "../../services/auth/verifyToken";
+import { HTTP_STATUSES, getUserById, login, signUp } from "../../actions";
+import auth from "../../services/auth";
 import requireDeviceId from "../../services/auth/requireDeviceId";
+import { selectUserByDeviceId } from "../../services/db";
 
 const router = Router({ mergeParams: true });
 
-router.route("/").get(requireDeviceId, verifyToken, async (req: any, res) => {
+router.route("/").get(requireDeviceId, async (req: any, res) => {
   try {
-    if ("user" in req) {
+    const {
+      signedCookies: { auth: token },
+      deviceId,
+    } = req;
+
+    let user: unknown;
+
+    if (token) {
+      const verifiedToken = (await auth.verify(token)) as
+        | { id: string }
+        | false;
+
+      if (verifiedToken) {
+        ({ user } = await getUserById({ id: verifiedToken.id }));
+      }
+    }
+
+    // No (valid) auth token — fall back to the guest identified by deviceId.
+    if (!user) {
+      user = await selectUserByDeviceId({ deviceId });
+    }
+
+    if (user) {
       res
         .status(HTTP_STATUSES.SUCCESS.OK)
-        .send({ message: "Account found", user: req.user });
+        .send({ message: "Account found", user });
     } else {
       throw {
         status: HTTP_STATUSES.CLIENT_ERROR.NOT_FOUND,
